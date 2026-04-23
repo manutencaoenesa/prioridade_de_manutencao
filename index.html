@@ -1,125 +1,171 @@
-import ds_python_interpreter
-
-# Vou gerar o código HTML completo e salvar em um arquivo para facilitar o uso.
-html_content = """
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard de Manutenção | Oficina</title>
+    <title>Dashboard de Manutenção | CO 008</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .header-banner { background: #003366; color: white; padding: 20px 0; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .card { border: none; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: transform 0.2s; }
-        .priority-ALTA { border-left: 5px solid #dc3545; }
-        .priority-MEDIA { border-left: 5px solid #ffc107; }
-        .priority-BAIXA { border-left: 5px solid #0d6efd; }
-        .badge-status { font-size: 0.85rem; padding: 0.5em 0.8em; }
-        .btn-filter { margin-right: 5px; margin-bottom: 10px; }
-        .table-container { background: white; padding: 20px; border-radius: 10px; }
-        .chart-container { max-height: 300px; margin-bottom: 30px; }
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
+        .header-banner { background: #002d5b; color: white; padding: 25px 0; margin-bottom: 30px; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .priority-ALTA { border-left: 6px solid #d9534f; }
+        .priority-MEDIA { border-left: 6px solid #f0ad4e; }
+        .priority-BAIXA { border-left: 6px solid #5bc0de; }
+        .btn-filter { min-width: 120px; font-weight: 600; }
+        #loading { display: block; text-align: center; padding: 50px; }
+        #content { display: none; }
     </style>
 </head>
 <body>
 
 <div class="header-banner">
     <div class="container d-flex justify-content-between align-items-center">
-        <h1>Oficina de Manutenção</h1>
-        <span id="current-date"></span>
+        <div>
+            <h1 class="mb-0">Oficina CO 008</h1>
+            <p class="mb-0 opacity-75">Status de Manutenção em Tempo Real</p>
+        </div>
+        <div class="text-end">
+            <span id="current-date" class="badge bg-light text-dark p-2"></span>
+        </div>
     </div>
 </div>
 
-<div class="container">
-    <div class="row">
+<div id="loading">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-2">Carregando dados da planilha...</p>
+</div>
+
+<div class="container" id="content">
+    <div class="row mb-4">
         <div class="col-md-4">
-            <div class="card p-3 chart-container">
-                <h5 class="text-center">Níveis de Prioridade</h5>
+            <div class="card p-3 h-100">
+                <h5 class="text-center mb-3">Distribuição de Prioridades</h5>
                 <canvas id="priorityChart"></canvas>
             </div>
         </div>
-        
         <div class="col-md-8">
-            <div class="mb-4">
-                <h5>Filtros por Setor:</h5>
-                <button class="btn btn-outline-dark btn-filter" onclick="filterData('TODOS')">TODOS</button>
-                <button class="btn btn-primary btn-filter" onclick="filterData('ELÉTRICA')">ELÉTRICA</button>
-                <button class="btn btn-secondary btn-filter" onclick="filterData('MECÂNICA')">MECÂNICA</button>
-            </div>
-            <div class="mb-4">
-                <h5>Exibição:</h5>
-                <button class="btn btn-warning btn-filter" onclick="showActive()">EM DESENVOLVIMENTO</button>
-                <button class="btn btn-success btn-filter" onclick="showLiberadas()">OS LIBERADAS (CONCLUÍDAS)</button>
+            <div class="card p-4 h-100">
+                <h5>Filtros Rápidos</h5>
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <button class="btn btn-dark btn-filter" onclick="filterSector('TODOS')">TODOS</button>
+                    <button class="btn btn-primary btn-filter" onclick="filterSector('ELÉTRICA')">ELÉTRICA</button>
+                    <button class="btn btn-info text-white btn-filter" onclick="filterSector('MECÂNICA')">MECÂNICA</button>
+                </div>
+                <hr>
+                <h5>Visualização</h5>
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-warning btn-filter" onclick="setView('DESENVOLVIMENTO')">EM DESENVOLVIMENTO</button>
+                    <button class="btn btn-success btn-filter" onclick="setView('LIBERADAS')">OS LIBERADAS</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="table-container shadow-sm">
-        <h4 id="table-title">Ordens de Serviço em Desenvolvimento</h4>
-        <div class="table-responsive">
-            <table class="table table-hover mt-3">
+    <div class="card">
+        <div class="card-header bg-white py-3">
+            <h4 class="mb-0" id="table-title">Ordens de Serviço Ativas</h4>
+        </div>
+        <div class="table-responsive p-3">
+            <table class="table table-hover align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>ID OS</th>
-                        <th>Descrição Geral</th>
+                        <th>ID</th>
+                        <th>Descrição</th>
                         <th>Prioridade</th>
                         <th>Status</th>
-                        <th>Recebida em</th>
+                        <th>Recebida</th>
                         <th>Previsão</th>
                         <th>Setor</th>
                     </tr>
                 </thead>
-                <tbody id="os-table-body">
-                    </tbody>
+                <tbody id="os-table-body"></tbody>
             </table>
         </div>
     </div>
 </div>
 
 <script>
-    // Dados de exemplo baseados na sua planilha
-    const dataOS = [
-        { id: 122, descricao: "OBRA:125 / RM:109643 / TALHA ALAVANCA 3T", prioridade: "ALTA", status: "OS LIBERADA", recebida: "26/03/2026", previsao: "05/04/2026", setor: "MECÂNICA" },
-        { id: 123, descricao: "CABEÇOTE P/ TESTE - 20 UNI", prioridade: "MEDIA", status: "EM MANUTENÇÃO", recebida: "07/04/2026", previsao: "15/04/2026", setor: "ELÉTRICA" },
-        { id: 128, descricao: "25 Máquinas de solda inversora (RM: 109545)", prioridade: "ALTA", status: "EM MANUTENÇÃO", recebida: "09/04/2026", previsao: "12/04/2026", setor: "ELÉTRICA" },
-        { id: 130, descricao: "Painel p/ manutenção RM: 110250", prioridade: "ALTA", status: "AGUARDANDO MANUTENÇÃO", recebida: "09/04/2026", previsao: "14/04/2026", setor: "ELÉTRICA" },
-        { id: 131, descricao: "PALETEIRA 3000KG", prioridade: "MEDIA", status: "OS LIBERADA", recebida: "10/04/2026", previsao: "18/04/2026", setor: "MECÂNICA" },
-        { id: 127, descricao: "GUINCHO DE ALAVANCA GA-1600KG", prioridade: "BAIXA", status: "OS LIBERADA", recebida: "14/04/2026", previsao: "20/04/2026", setor: "MECÂNICA" }
-    ];
-
-    let currentFilter = 'ACTIVE'; // ACTIVE ou LIBERADA
+    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSULFyQ_CCDdAIfRl8AES8gg3Pkde3NXeiZv2g_2DkEsvkKrAZBouHdbsYjMnCl1sgDuCvJ57ojf7pX/pub?output=csv';
+    
+    let allData = [];
     let currentSector = 'TODOS';
+    let currentView = 'DESENVOLVIMENTO'; // 'DESENVOLVIMENTO' ou 'LIBERADAS'
+    let myChart;
 
     const priorityOrder = { "ALTA": 1, "MEDIA": 2, "BAIXA": 3 };
 
-    function renderTable() {
+    async function fetchData() {
+        try {
+            const response = await fetch(csvUrl);
+            const data = await response.text();
+            allData = parseCSV(data);
+            
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+            
+            renderDashboard();
+        } catch (error) {
+            console.error('Erro ao carregar CSV:', error);
+            document.getElementById('loading').innerHTML = '<p class="text-danger">Erro ao carregar dados. Verifique a conexão.</p>';
+        }
+    }
+
+    function parseCSV(csvText) {
+        const lines = csvText.split('\\n');
+        const result = [];
+        // Ignorar o cabeçalho (i=1)
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            const columns = lines[i].split(',');
+            
+            // Mapeamento baseado na sua ordem de colunas
+            result.push({
+                id: columns[0],
+                abertura: columns[1],
+                recebida: columns[2],
+                fechamento: columns[3],
+                manutencao: columns[4],
+                solicitante: columns[5],
+                descricao: columns[6],
+                prioridade: columns[7]?.toUpperCase().trim(),
+                status: columns[8]?.toUpperCase().trim(),
+                setor: columns[9]?.toUpperCase().trim(),
+                custo: columns[10],
+                previsao: columns[11]
+            });
+        }
+        return result;
+    }
+
+    function renderDashboard() {
         const tableBody = document.getElementById('os-table-body');
         tableBody.innerHTML = '';
 
-        let filtered = dataOS.filter(os => {
-            const statusMatch = currentFilter === 'ACTIVE' 
-                ? (os.status === 'EM MANUTENÇÃO' || os.status === 'AGUARDANDO MANUTENÇÃO')
-                : (os.status === 'OS LIBERADA');
+        let filtered = allData.filter(os => {
+            // Lógica de visualização (Desenvolvimento vs Liberadas)
+            const isLiberada = os.status.includes('LIBERADA') || os.status.includes('CONCLUIDA');
+            const statusMatch = (currentView === 'DESENVOLVIMENTO') ? !isLiberada : isLiberada;
             
-            const sectorMatch = currentSector === 'TODOS' || os.setor === currentSector;
+            // Lógica de Setor
+            const sectorMatch = (currentSector === 'TODOS') || (os.setor === currentSector);
             
-            return statusMatch && sectorMatch;
+            return statusMatch && sectorMatch && os.id;
         });
 
-        // Ordenar por prioridade (ALTA -> MEDIA -> BAIXA)
-        filtered.sort((a, b) => priorityOrder[a.prioridade] - priorityOrder[b.prioridade]);
+        // Ordenação por Prioridade
+        filtered.sort((a, b) => (priorityOrder[a.prioridade] || 99) - (priorityOrder[b.prioridade] || 99));
 
         filtered.forEach(os => {
             const row = `
                 <tr class="priority-${os.prioridade}">
                     <td><strong>#${os.id}</strong></td>
-                    <td>${os.descricao}</td>
+                    <td><small>${os.descricao}</small></td>
                     <td><span class="badge ${getPriorityClass(os.prioridade)}">${os.prioridade}</span></td>
-                    <td><span class="badge bg-light text-dark border badge-status">${os.status}</span></td>
-                    <td>${os.recebida}</td>
-                    <td>${os.previsao}</td>
+                    <td><span class="badge bg-light text-dark border">${os.status}</span></td>
+                    <td>${os.recebida || '-'}</td>
+                    <td>${os.previsao || '-'}</td>
                     <td><small class="text-muted">${os.setor}</small></td>
                 </tr>
             `;
@@ -132,58 +178,46 @@ html_content = """
     function getPriorityClass(p) {
         if(p === 'ALTA') return 'bg-danger';
         if(p === 'MEDIA') return 'bg-warning text-dark';
-        return 'bg-primary';
+        if(p === 'BAIXA') return 'bg-info text-white';
+        return 'bg-secondary';
     }
 
-    function filterData(sector) {
+    function filterSector(sector) {
         currentSector = sector;
-        renderTable();
+        renderDashboard();
     }
 
-    function showActive() {
-        currentFilter = 'ACTIVE';
-        document.getElementById('table-title').innerText = 'Ordens de Serviço em Desenvolvimento';
-        renderTable();
+    function setView(view) {
+        currentView = view;
+        document.getElementById('table-title').innerText = view === 'DESENVOLVIMENTO' ? 'Ordens de Serviço Ativas' : 'Histórico de OS Liberadas';
+        renderDashboard();
     }
 
-    function showLiberadas() {
-        currentFilter = 'LIBERADA';
-        document.getElementById('table-title').innerText = 'Histórico de OS Liberadas';
-        renderTable();
-    }
-
-    // Lógica do Gráfico
-    let myChart;
     function updateChart(items) {
         const counts = { ALTA: 0, MEDIA: 0, BAIXA: 0 };
-        items.forEach(item => counts[item.prioridade]++);
+        items.forEach(item => {
+            if(counts[item.prioridade] !== undefined) counts[item.prioridade]++;
+        });
 
         const ctx = document.getElementById('priorityChart').getContext('2d');
-        
         if (myChart) myChart.destroy();
 
         myChart = new Chart(ctx, {
-            type: 'doughnut',
+            type: 'pie',
             data: {
                 labels: ['Alta', 'Média', 'Baixa'],
                 datasets: [{
                     data: [counts.ALTA, counts.MEDIA, counts.BAIXA],
-                    backgroundColor: ['#dc3545', '#ffc107', '#0d6efd'],
+                    backgroundColor: ['#d9534f', '#f0ad4e', '#5bc0de'],
                 }]
             },
-            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+            options: { plugins: { legend: { position: 'bottom' } } }
         });
     }
 
     document.getElementById('current-date').innerText = new Date().toLocaleDateString('pt-BR');
-    renderTable();
-
+    fetchData();
 </script>
 
 </body>
 </html>
-"""
-
-with open("index.html", "w", encoding="utf-8") as f:
-    f.write(html_content)
-"""
