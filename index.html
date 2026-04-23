@@ -11,7 +11,7 @@
         body { background-color: #e9ecef; font-family: 'Segoe UI', system-ui, sans-serif; color: #333; }
         
         /* Ajustes Mobile */
-        .navbar { background-color: var(--dark-blue); color: white; padding: 10px; sticky: top; z-index: 1000; }
+        .navbar { background-color: var(--dark-blue); color: white; padding: 10px; position: sticky; top: 0; z-index: 1000; }
         .container-fluid { padding: 10px; }
         
         .card { border: none; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
@@ -48,7 +48,7 @@
 
 <div id="loading">
     <div class="spinner-border text-primary" role="status"></div>
-    <p class="mt-2 text-muted">Carregando dados...</p>
+    <p class="mt-2 text-muted" id="loading-text">Sincronizando dados...</p>
 </div>
 
 <div class="container-fluid" id="main-content" style="display: none;">
@@ -84,7 +84,10 @@
     </div>
 
     <div class="table-container shadow-sm">
-        <h6 id="table-title" class="fw-bold mb-3 px-2">Ordens em Desenvolvimento</h6>
+        <div class="d-flex justify-content-between align-items-center mb-3 px-2">
+            <h6 id="table-title" class="fw-bold mb-0">Ordens em Desenvolvimento</h6>
+            <span id="row-count-badge" class="badge bg-secondary">0 OS</span>
+        </div>
         <div class="table-responsive">
             <table class="table align-middle">
                 <thead>
@@ -110,21 +113,25 @@
 
     const priorityOrder = { 'ALTA': 1, 'MEDIA': 2, 'BAIXA': 3 };
 
-   async function load() {
+    async function load() {
         try {
-            // Adicionamos um parâmetro extra (t=...) para evitar que o navegador use o cache antigo
-            const cacheBuster = `&t=${new Date().getTime()}`;
-            const res = await fetch(csvUrl + cacheBuster);
+            // SISTEMA ANTI-CACHE: Adiciona um número aleatório para forçar o download dos dados novos
+            const forcingUpdate = `&cache_step=${Math.random()}`; 
+            const res = await fetch(csvUrl + forcingUpdate);
+            
+            if (!res.ok) throw new Error('Falha na rede');
             
             const text = await res.text();
             allData = parseCSV(text);
+            
+            console.log(`Dados carregados: ${allData.length - 1} linhas encontradas.`);
             
             document.getElementById('loading').style.display = 'none';
             document.getElementById('main-content').style.display = 'block';
             render();
         } catch (e) { 
             console.error(e); 
-            document.getElementById('loading').innerHTML = '<p class="text-danger">Erro ao conectar. Tente atualizar em instantes.</p>';
+            document.getElementById('loading-text').innerHTML = '<span class="text-danger">Erro ao carregar dados. O link pode estar indisponível ou sendo atualizado pelo Google.</span>';
         }
     }
 
@@ -139,6 +146,7 @@
                 if (col !== "" || row.length > 0) { row.push(col.trim()); rows.push(row); row = []; col = ""; }
             } else col += c;
         }
+        if (col !== "" || row.length > 0) { row.push(col.trim()); rows.push(row); }
         return rows;
     }
 
@@ -152,10 +160,10 @@
             const isLib = status.includes('LIBERADA');
             const matchesView = (currentView === 'DESENVOLVIMENTO') ? !isLib : isLib;
             const matchesSec = (currentSector === 'TODOS') || (sector === currentSector);
-            return matchesView && matchesSec && r[0];
+            return matchesView && matchesSec && r[0]; // r[0] garante que tem um ID
         });
 
-        // LÓGICA DE ORDENAÇÃO SOLICITADA
+        // LÓGICA DE ORDENAÇÃO
         if (currentView === 'DESENVOLVIMENTO') {
             // Por Prioridade (Alta > Média > Baixa)
             filtered.sort((a, b) => (priorityOrder[a[7]] || 99) - (priorityOrder[b[7]] || 99));
@@ -164,6 +172,9 @@
             filtered.sort((a, b) => parseInt(b[0] || 0) - parseInt(a[0] || 0));
         }
 
+        // Atualiza o contador de linhas na tela
+        document.getElementById('row-count-badge').innerText = `${filtered.length} OS`;
+
         filtered.forEach(r => {
             const tr = document.createElement('tr');
             tr.className = `priority-${r[7]}`;
@@ -171,7 +182,7 @@
                 <td class="fw-bold">#${r[0]}</td>
                 <td>
                     <div style="font-size: 0.8rem; font-weight: 600;">${r[6]}</div>
-                    <div class="text-muted small">Recebida: ${r[2]} | Prev: ${r[11] || '-'}</div>
+                    <div class="text-muted small">Rec: ${r[2]} | Prev: ${r[11] || '-'}</div>
                 </td>
                 <td>
                     <span class="badge badge-status mb-1">${r[8]}</span><br>
@@ -186,14 +197,11 @@
     }
 
     function updateUI() {
-        // Título
         document.getElementById('table-title').innerText = currentView === 'DESENVOLVIMENTO' ? 'Ordens em Desenvolvimento' : 'Histórico de OS Liberadas';
         
-        // Botões de Visualização
         document.getElementById('btn-view-DESENVOLVIMENTO').className = currentView === 'DESENVOLVIMENTO' ? 'btn btn-warning btn-filter text-white' : 'btn btn-outline-warning btn-filter';
         document.getElementById('btn-view-LIBERADAS').className = currentView === 'LIBERADAS' ? 'btn btn-success btn-filter' : 'btn btn-outline-success btn-filter';
         
-        // Botões de Setor
         ['TODOS', 'ELÉTRICA', 'MECÂNICA'].forEach(s => {
             const btn = document.getElementById('btn-setor-' + s);
             if (currentSector === s) {
@@ -225,6 +233,8 @@
     }
 
     document.getElementById('current-date').innerText = new Date().toLocaleDateString('pt-BR');
+    
+    // Inicia a aplicação
     load();
 </script>
 
