@@ -110,15 +110,22 @@
 
     const priorityOrder = { 'ALTA': 1, 'MEDIA': 2, 'BAIXA': 3 };
 
-    async function load() {
+   async function load() {
         try {
-            const res = await fetch(csvUrl);
+            // Adicionamos um parâmetro extra (t=...) para evitar que o navegador use o cache antigo
+            const cacheBuster = `&t=${new Date().getTime()}`;
+            const res = await fetch(csvUrl + cacheBuster);
+            
             const text = await res.text();
             allData = parseCSV(text);
+            
             document.getElementById('loading').style.display = 'none';
             document.getElementById('main-content').style.display = 'block';
             render();
-        } catch (e) { console.error(e); }
+        } catch (e) { 
+            console.error(e); 
+            document.getElementById('loading').innerHTML = '<p class="text-danger">Erro ao conectar. Tente atualizar em instantes.</p>';
+        }
     }
 
     function parseCSV(text) {
