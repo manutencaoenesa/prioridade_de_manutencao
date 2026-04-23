@@ -3,84 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Oficina | CO 008</title>
+    <title>Dashboard Oficina | Mobile</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
-        .navbar { background-color: #002d5b; color: white; padding: 15px; margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .card { border: none; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: 0.3s; }
-        .table-container { background: white; border-radius: 10px; padding: 20px; }
+        :root { --dark-blue: #002d5b; --light-gray: #f8f9fa; }
+        body { background-color: #e9ecef; font-family: 'Segoe UI', system-ui, sans-serif; color: #333; }
+        
+        /* Ajustes Mobile */
+        .navbar { background-color: var(--dark-blue); color: white; padding: 10px; sticky: top; z-index: 1000; }
+        .container-fluid { padding: 10px; }
+        
+        .card { border: none; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        
+        /* Filtros Compactos */
+        .btn-filter { font-size: 0.85rem; padding: 8px 12px; font-weight: 600; border-radius: 8px; flex: 1; }
+        .btn-clear { font-size: 0.8rem; text-decoration: underline; color: #666; cursor: pointer; border: none; background: none; }
+
+        /* Tabela Responsiva */
+        .table-container { background: white; border-radius: 12px; padding: 10px; overflow-x: auto; }
+        th { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; border-bottom: 2px solid #f0f0f0 !important; }
+        td { font-size: 0.85rem; padding: 12px 8px !important; }
         
         /* Cores de Prioridade */
-        .priority-ALTA { border-left: 6px solid #dc3545 !important; }
-        .priority-MEDIA { border-left: 6px solid #ffc107 !important; }
-        .priority-BAIXA { border-left: 6px solid #0d6efd !important; }
+        .priority-ALTA { border-left: 5px solid #dc3545 !important; background-color: #fffdfd; }
+        .priority-MEDIA { border-left: 5px solid #ffc107 !important; background-color: #fffef9; }
+        .priority-BAIXA { border-left: 5px solid #0d6efd !important; background-color: #f9fcff; }
         
-        .badge-priority { width: 80px; font-weight: bold; }
-        .btn-filter { min-width: 130px; font-weight: 600; border-radius: 20px; }
-        #loading { text-align: center; padding: 100px; }
-        th { font-size: 0.9rem; text-transform: uppercase; color: #666; border-bottom: 2px solid #eee !important; }
+        .badge-status { font-size: 0.7rem; background: #eee; color: #555; }
+        
+        #loading { text-align: center; margin-top: 100px; }
+        .mobile-scroll { display: flex; overflow-x: auto; gap: 8px; padding-bottom: 5px; }
+        .mobile-scroll::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
 
-<nav class="navbar">
-    <div class="container-fluid d-flex justify-content-between align-items-center">
-        <h4 class="mb-0">Painel de Manutenção - Central de Operações</h4>
-        <span id="current-date" class="badge bg-light text-dark"></span>
+<nav class="navbar shadow-sm">
+    <div class="container-fluid">
+        <span class="fw-bold">Oficina CO 008</span>
+        <small id="current-date" class="opacity-75"></small>
     </div>
 </nav>
 
 <div id="loading">
     <div class="spinner-border text-primary" role="status"></div>
-    <p class="mt-3">Sincronizando com a planilha...</p>
+    <p class="mt-2 text-muted">Carregando dados...</p>
 </div>
 
 <div class="container-fluid" id="main-content" style="display: none;">
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card p-3 h-100">
-                <h6 class="text-center mb-3">Resumo de Prioridades</h6>
-                <canvas id="priorityChart"></canvas>
+    
+    <div class="row">
+        <div class="col-12 col-md-4">
+            <div class="card p-3 mb-3">
+                <canvas id="priorityChart" style="max-height: 150px;"></canvas>
             </div>
         </div>
+        
+        <div class="col-12 col-md-8">
+            <div class="card p-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0">Filtros</h6>
+                    <button class="btn-clear" onclick="clearFilters()">Limpar Filtros</button>
+                </div>
+                
+                <p class="small text-muted mb-1">Setor:</p>
+                <div class="mobile-scroll mb-3">
+                    <button id="btn-setor-TODOS" class="btn btn-dark btn-filter" onclick="filterSector('TODOS')">TODOS</button>
+                    <button id="btn-setor-ELÉTRICA" class="btn btn-outline-primary btn-filter" onclick="filterSector('ELÉTRICA')">ELÉTRICA</button>
+                    <button id="btn-setor-MECÂNICA" class="btn btn-outline-info btn-filter" onclick="filterSector('MECÂNICA')">MECÂNICA</button>
+                </div>
 
-        <div class="col-md-9">
-            <div class="card p-4 h-100">
-                <div class="row">
-                    <div class="col-md-6 border-end">
-                        <h6>Filtrar por Setor</h6>
-                        <div class="d-flex gap-2 mt-3">
-                            <button class="btn btn-outline-dark btn-filter" onclick="filterSector('TODOS')">TODOS</button>
-                            <button class="btn btn-primary btn-filter" onclick="filterSector('ELÉTRICA')">ELÉTRICA</button>
-                            <button class="btn btn-info text-white btn-filter" onclick="filterSector('MECÂNICA')">MECÂNICA</button>
-                        </div>
-                    </div>
-                    <div class="col-md-6 ps-4">
-                        <h6>Status da OS</h6>
-                        <div class="d-flex gap-2 mt-3">
-                            <button id="btn-desenvolvimento" class="btn btn-warning btn-filter" onclick="setStatusView('DESENVOLVIMENTO')">DESENVOLVIMENTO</button>
-                            <button id="btn-liberadas" class="btn btn-outline-success btn-filter" onclick="setStatusView('LIBERADAS')">OS LIBERADAS</button>
-                        </div>
-                    </div>
+                <p class="small text-muted mb-1">Exibição:</p>
+                <div class="d-flex gap-2">
+                    <button id="btn-view-DESENVOLVIMENTO" class="btn btn-warning btn-filter text-white" onclick="setView('DESENVOLVIMENTO')">ATIVAS</button>
+                    <button id="btn-view-LIBERADAS" class="btn btn-outline-success btn-filter" onclick="setView('LIBERADAS')">LIBERADAS</button>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="table-container shadow-sm">
+        <h6 id="table-title" class="fw-bold mb-3 px-2">Ordens em Desenvolvimento</h6>
         <div class="table-responsive">
-            <table class="table table-hover align-middle">
+            <table class="table align-middle">
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Recebida</th>
-                        <th style="width: 40%;">Descrição Geral</th>
-                        <th>Prioridade</th>
-                        <th>Status OS</th>
-                        <th>Setor</th>
-                        <th>Previsão</th>
+                        <th>Equipamento / Descrição</th>
+                        <th>Status / Setor</th>
                     </tr>
                 </thead>
                 <tbody id="os-table-body"></tbody>
@@ -92,42 +103,34 @@
 <script>
     const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSULFyQ_CCDdAIfRl8AES8gg3Pkde3NXeiZv2g_2DkEsvkKrAZBouHdbsYjMnCl1sgDuCvJ57ojf7pX/pub?gid=1300746091&single=true&output=csv';
     
-    let fullData = [];
+    let allData = [];
     let currentSector = 'TODOS';
-    let currentView = 'DESENVOLVIMENTO'; 
+    let currentView = 'DESENVOLVIMENTO';
     let chartInstance = null;
 
-    const priorityMap = { 'ALTA': 1, 'MEDIA': 2, 'BAIXA': 3 };
+    const priorityOrder = { 'ALTA': 1, 'MEDIA': 2, 'BAIXA': 3 };
 
-    async function init() {
+    async function load() {
         try {
-            const response = await fetch(csvUrl);
-            const text = await response.text();
-            fullData = parseCSV(text);
-            
+            const res = await fetch(csvUrl);
+            const text = await res.text();
+            allData = parseCSV(text);
             document.getElementById('loading').style.display = 'none';
             document.getElementById('main-content').style.display = 'block';
-            
             render();
-        } catch (e) {
-            console.error(e);
-            document.getElementById('loading').innerHTML = '<h5 class="text-danger">Erro ao carregar dados.</h5>';
-        }
+        } catch (e) { console.error(e); }
     }
 
     function parseCSV(text) {
-        const rows = [];
-        let row = [];
-        let col = "";
-        let inQuotes = false;
+        const rows = []; let row = []; let col = ""; let inQuotes = false;
         for (let i = 0; i < text.length; i++) {
-            let char = text[i];
-            if (char === '"' && text[i+1] === '"') { col += '"'; i++; }
-            else if (char === '"') { inQuotes = !inQuotes; }
-            else if (char === ',' && !inQuotes) { row.push(col.trim()); col = ""; }
-            else if ((char === '\r' || char === '\n') && !inQuotes) {
+            let c = text[i];
+            if (c === '"' && text[i+1] === '"') { col += '"'; i++; }
+            else if (c === '"') inQuotes = !inQuotes;
+            else if (c === ',' && !inQuotes) { row.push(col.trim()); col = ""; }
+            else if ((c === '\r' || c === '\n') && !inQuotes) {
                 if (col !== "" || row.length > 0) { row.push(col.trim()); rows.push(row); row = []; col = ""; }
-            } else { col += char; }
+            } else col += c;
         }
         return rows;
     }
@@ -136,81 +139,86 @@
         const tbody = document.getElementById('os-table-body');
         tbody.innerHTML = '';
 
-        let filtered = fullData.slice(1).filter(row => {
-            const status = (row[8] || '').toUpperCase();
-            const setor = (row[9] || '').toUpperCase();
-            
-            // Lógica de Status (Desenvolvimento vs Liberadas)
-            const isLiberada = status.includes('LIBERADA');
-            const matchesView = (currentView === 'DESENVOLVIMENTO') ? !isLiberada : isLiberada;
-            
-            // Lógica de Setor
-            const matchesSector = (currentSector === 'TODOS') || (setor === currentSector);
-            
-            return matchesView && matchesSector && row[0];
+        let filtered = allData.slice(1).filter(r => {
+            const status = (r[8] || '').toUpperCase();
+            const sector = (r[9] || '').toUpperCase();
+            const isLib = status.includes('LIBERADA');
+            const matchesView = (currentView === 'DESENVOLVIMENTO') ? !isLib : isLib;
+            const matchesSec = (currentSector === 'TODOS') || (sector === currentSector);
+            return matchesView && matchesSec && r[0];
         });
 
-        // Ordenação por Prioridade (Alta > Media > Baixa)
-        filtered.sort((a, b) => (priorityMap[a[7]] || 99) - (priorityMap[b[7]] || 99));
+        // LÓGICA DE ORDENAÇÃO SOLICITADA
+        if (currentView === 'DESENVOLVIMENTO') {
+            // Por Prioridade (Alta > Média > Baixa)
+            filtered.sort((a, b) => (priorityOrder[a[7]] || 99) - (priorityOrder[b[7]] || 99));
+        } else {
+            // Por ID Decrescente (Maior para Menor)
+            filtered.sort((a, b) => parseInt(b[0] || 0) - parseInt(a[0] || 0));
+        }
 
-        filtered.forEach(row => {
+        filtered.forEach(r => {
             const tr = document.createElement('tr');
-            tr.className = `priority-${row[7]}`;
+            tr.className = `priority-${r[7]}`;
             tr.innerHTML = `
-                <td><strong>#${row[0]}</strong></td>
-                <td><small>${row[2] || '-'}</small></td>
-                <td>${row[6]}</td>
-                <td><span class="badge badge-priority ${getPriorityColor(row[7])}">${row[7]}</span></td>
-                <td><span class="text-secondary" style="font-size: 0.85rem;">${row[8]}</span></td>
-                <td><small class="fw-bold">${row[9]}</small></td>
-                <td><span class="text-primary fw-bold">${row[11] || '-'}</span></td>
+                <td class="fw-bold">#${r[0]}</td>
+                <td>
+                    <div style="font-size: 0.8rem; font-weight: 600;">${r[6]}</div>
+                    <div class="text-muted small">Recebida: ${r[2]} | Prev: ${r[11] || '-'}</div>
+                </td>
+                <td>
+                    <span class="badge badge-status mb-1">${r[8]}</span><br>
+                    <small class="text-primary fw-bold">${r[9]}</small>
+                </td>
             `;
             tbody.appendChild(tr);
         });
 
+        updateUI();
         updateChart(filtered);
     }
 
-    function getPriorityColor(p) {
-        if (p === 'ALTA') return 'bg-danger';
-        if (p === 'MEDIA') return 'bg-warning text-dark';
-        if (p === 'BAIXA') return 'bg-primary';
-        return 'bg-secondary';
+    function updateUI() {
+        // Título
+        document.getElementById('table-title').innerText = currentView === 'DESENVOLVIMENTO' ? 'Ordens em Desenvolvimento' : 'Histórico de OS Liberadas';
+        
+        // Botões de Visualização
+        document.getElementById('btn-view-DESENVOLVIMENTO').className = currentView === 'DESENVOLVIMENTO' ? 'btn btn-warning btn-filter text-white' : 'btn btn-outline-warning btn-filter';
+        document.getElementById('btn-view-LIBERADAS').className = currentView === 'LIBERADAS' ? 'btn btn-success btn-filter' : 'btn btn-outline-success btn-filter';
+        
+        // Botões de Setor
+        ['TODOS', 'ELÉTRICA', 'MECÂNICA'].forEach(s => {
+            const btn = document.getElementById('btn-setor-' + s);
+            if (currentSector === s) {
+                btn.className = 'btn btn-dark btn-filter';
+            } else {
+                const color = s === 'ELÉTRICA' ? 'btn-outline-primary' : (s === 'MECÂNICA' ? 'btn-outline-info' : 'btn-outline-dark');
+                btn.className = `btn ${color} btn-filter`;
+            }
+        });
     }
 
-    function filterSector(s) {
-        currentSector = s;
-        render();
-    }
-
-    function setStatusView(v) {
-        currentView = v;
-        document.getElementById('btn-desenvolvimento').className = v === 'DESENVOLVIMENTO' ? 'btn btn-warning btn-filter' : 'btn btn-outline-warning btn-filter';
-        document.getElementById('btn-liberadas').className = v === 'LIBERADAS' ? 'btn btn-success btn-filter' : 'btn btn-outline-success btn-filter';
-        render();
-    }
+    function filterSector(s) { currentSector = s; render(); }
+    function setView(v) { currentView = v; render(); }
+    function clearFilters() { currentSector = 'TODOS'; currentView = 'DESENVOLVIMENTO'; render(); }
 
     function updateChart(data) {
         const stats = { ALTA: 0, MEDIA: 0, BAIXA: 0 };
         data.forEach(r => { if(stats[r[7]] !== undefined) stats[r[7]]++; });
-
         const ctx = document.getElementById('priorityChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
         chartInstance = new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: ['Alta', 'Média', 'Baixa'],
-                datasets: [{
-                    data: [stats.ALTA, stats.MEDIA, stats.BAIXA],
-                    backgroundColor: ['#dc3545', '#ffc107', '#0d6efd']
-                }]
+                datasets: [{ data: [stats.ALTA, stats.MEDIA, stats.BAIXA], backgroundColor: ['#dc3545', '#ffc107', '#0d6efd'] }]
             },
-            options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } }
         });
     }
 
     document.getElementById('current-date').innerText = new Date().toLocaleDateString('pt-BR');
-    init();
+    load();
 </script>
 
 </body>
