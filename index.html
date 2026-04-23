@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Manutenção</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+    font-family: Arial;
+    background: #f4f6f9;
+    margin: 20px;
+}
+
+h1 {
+    text-align: center;
+}
+
+.controls {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+button {
+    padding: 10px 15px;
+    margin: 5px;
+    border: none;
+    cursor: pointer;
+    border-radius: 6px;
+    font-weight: bold;
+}
+
+.btn-eletrica { background: #f1c40f; }
+.btn-mecanica { background: #3498db; color: white; }
+.btn-liberadas { background: #2ecc71; color: white; }
+
+.container {
+    display: flex;
+    gap: 20px;
+}
+
+.table-container {
+    flex: 2;
+}
+
+.chart-container {
+    flex: 1;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+th {
+    background: #2c3e50;
+    color: white;
+    padding: 10px;
+}
+
+td {
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
+}
+
+.alta { background: #ffcccc; }
+.media { background: #fff3cd; }
+.baixa { background: #d4edda; }
+
+.status {
+    font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Painel de Manutenção</h1>
+
+<div class="controls">
+    <button class="btn-eletrica" onclick="filtrarSetor('ELÉTRICA')">Elétrica</button>
+    <button class="btn-mecanica" onclick="filtrarSetor('MECÂNICA')">Mecânica</button>
+    <button onclick="filtrarSetor('TODOS')">Todos</button>
+    <button class="btn-liberadas" onclick="mostrarLiberadas()">OS Liberadas</button>
+</div>
+
+<div class="container">
+
+<div class="table-container">
+<table id="tabela">
+<thead>
+<tr>
+<th>ID</th>
+<th>Descrição</th>
+<th>Prioridade</th>
+<th>Status</th>
+<th>Recebida</th>
+<th>Previsão</th>
+<th>Setor</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+<div class="chart-container">
+<canvas id="grafico"></canvas>
+</div>
+
+</div>
+
+<script>
+
+const API_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSULFyQ_CCDdAIfRl8AES8gg3Pkde3NXeiZv2g_2DkEsvkKrAZBouHdbsYjMnCl1sgDuCvJ57ojf7pX/pub?gid=1300746091&single=true&output=csv";
+
+let dados = [];
+
+function prioridadeValor(p) {
+    if (p === "ALTA") return 3;
+    if (p === "MEDIA") return 2;
+    return 1;
+}
+
+function carregarDados() {
+    fetch(API_URL)
+    .then(res => res.json())
+    .then(data => {
+        dados = data;
+        renderizarTabela(data);
+        gerarGrafico(data);
+    });
+}
+
+function renderizarTabela(lista) {
+
+    lista.sort((a,b) => prioridadeValor(b.PRIORIDADE) - prioridadeValor(a.PRIORIDADE));
+
+    const tbody = document.querySelector("#tabela tbody");
+    tbody.innerHTML = "";
+
+    lista.forEach(item => {
+
+        const tr = document.createElement("tr");
+
+        if(item.PRIORIDADE === "ALTA") tr.classList.add("alta");
+        if(item.PRIORIDADE === "MEDIA") tr.classList.add("media");
+        if(item.PRIORIDADE === "BAIXA") tr.classList.add("baixa");
+
+        tr.innerHTML = `
+            <td>${item.ID_OS}</td>
+            <td>${item.DESCRICAO_GERAL}</td>
+            <td>${item.PRIORIDADE}</td>
+            <td class="status">${item.STATUS_OS}</td>
+            <td>${item.DATA_RECEBIDA}</td>
+            <td>${item.DATA_DE_PREVISAO || '-'}</td>
+            <td>${item.SETOR_RESPONSÁVEL}</td>
+        `;
+
+        tbody.appendChild(tr);
+    });
+}
+
+function filtrarSetor(setor) {
+    if(setor === "TODOS") {
+        renderizarTabela(dados);
+        return;
+    }
+
+    const filtrado = dados.filter(d => d["SETOR_RESPONSÁVEL"] === setor && d.STATUS_OS !== "OS LIBERADA");
+    renderizarTabela(filtrado);
+}
+
+function mostrarLiberadas() {
+    const liberadas = dados.filter(d => d.STATUS_OS === "OS LIBERADA");
+    renderizarTabela(liberadas);
+}
+
+function gerarGrafico(lista) {
+
+    const contagem = {
+        ALTA: 0,
+        MEDIA: 0,
+        BAIXA: 0
+    };
+
+    lista.forEach(i => {
+        contagem[i.PRIORIDADE]++;
+    });
+
+    new Chart(document.getElementById("grafico"), {
+        type: 'bar',
+        data: {
+            labels: ["Alta", "Média", "Baixa"],
+            datasets: [{
+                label: "Quantidade",
+                data: [contagem.ALTA, contagem.MEDIA, contagem.BAIXA]
+            }]
+        }
+    });
+}
+
+carregarDados();
+
+</script>
+
+</body>
+</html>
